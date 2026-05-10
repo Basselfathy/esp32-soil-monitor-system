@@ -1,0 +1,9 @@
+# Don't commit credentials
+secrets.h
+.vscode
+vscode
+# Arduino build output
+build/
+*.bin
+*.elf
+*.map
