@@ -28,16 +28,18 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
 | Capacitive soil moisture sensor | Outputs an analog voltage —**not** resistive type  |
 | 5 V relay module                | Active-high (default) or active-low — see[Wiring](#wiring)  |
 | Submersible mini pump           | Rated for your relay's switching capacity                 |
-| 5 V power supply                | Shared for ESP32 + relay; pump may need a separate supply |
+| 3.7 V power supply                | Shared for ESP32 + relay; pump may need a separate supply |
 
 ---
 
 ## Wiring
 
+<img width="3000" height="1863" alt="circuit_image" src="https://github.com/user-attachments/assets/c8398140-dcb2-4f54-bf4b-86c4270b24a7" />
+
 ```
   ESP32                    Soil Sensor
   ─────────────────────    ───────────
-  3.3V     ──────────────► VCC
+  5V     ──────────────► VCC
   GND      ──────────────► GND
   GPIO 34  ◄────────────── AOUT
 
@@ -49,7 +51,7 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
   GND      ──────────────► GND
 
 
-  PSU (+5V) ──────────────► Relay NO ──┐
+  PSU (+3.7V) ──────────────► Relay NO ──┐
                                         │ (closed when pump ON)
   Relay COM ◄─────────────────────────┘
   Relay COM ──────────────► Pump  (+)
@@ -58,13 +60,13 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
 
 | Wire                  | From                   | To                     |
 | --------------------- | ---------------------- | ---------------------- |
-| Sensor power          | ESP32 3.3 V            | Sensor VCC             |
+| Sensor power          | ESP32 5 V            | Sensor VCC             |
 | Sensor ground         | ESP32 GND              | Sensor GND             |
 | Sensor signal         | Sensor AOUT            | ESP32**GPIO 34** |
 | Relay signal          | ESP32**GPIO 26** | Relay IN               |
-| Relay power           | ESP32 5 V              | Relay VCC              |
+| Relay power           | battery 3.7 V              | Relay VCC              |
 | Relay ground          | ESP32 GND              | Relay GND              |
-| Pump power (switched) | PSU +5 V               | Relay NO               |
+| Pump power (switched) | PSU +3.7 V               | Relay NO               |
 | Pump return           | Relay COM              | Pump +                 |
 | Pump ground           | PSU GND                | Pump −                |
 
@@ -155,6 +157,8 @@ You will be prompted for the username and password set in `secrets.h`.
 ---
 
 ## Dashboard overview
+<img width="1919" height="911" alt="Screenshot 2026-05-10 155528" src="https://github.com/user-attachments/assets/f20de7a8-050b-4669-98d2-6927b55299f6" />
+
 
 The dashboard is organised into four tabs:
 
