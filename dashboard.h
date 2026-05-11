@@ -99,6 +99,12 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
   .big.dry{color:var(--red)}
   .moisture-meta .label{font-size:.82rem;color:var(--sub)}
   .moisture-meta .ts{font-size:.72rem;color:#9ca3af;margin-top:4px}
+  /* ── Environment ── */
+  .env-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:2px}
+  .env-tile{text-align:center;padding:8px 4px;background:var(--bg);border-radius:10px}
+  .env-val{font-size:1.55rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
+  .env-val.na{color:#9ca3af;font-size:1.1rem}
+  .env-label{font-size:.7rem;color:var(--sub);margin-top:3px}
   /* ── Chart ── */
   .chart-wrap{position:relative;height:180px}
   /* ── Pump ── */
@@ -165,6 +171,14 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
   #serial-log::-webkit-scrollbar{width:4px}
   #serial-log::-webkit-scrollbar-track{background:#374151}
   #serial-log::-webkit-scrollbar-thumb{background:#4b5563;border-radius:4px}
+  /* ── Calibration ── */
+  .calib-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:6px}
+  .calib-table th{text-align:left;color:var(--sub);font-weight:600;font-size:.72rem;
+    text-transform:uppercase;letter-spacing:.05em;padding:4px 8px 4px 0;border-bottom:1px solid var(--border)}
+  .calib-table td{padding:7px 8px 7px 0;border-bottom:1px solid var(--border)}
+  .calib-table tr:last-child td{border-bottom:none}
+  .calib-raw{font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);font-size:.9rem}
+  .calib-pct{color:var(--sub)}
   /* ── Toast ── */
   #toast{
     position:fixed;bottom:calc(var(--nav-h) + 10px);left:50%;
@@ -188,12 +202,14 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
       grid-template-areas:
         "overview pump"
         "overview settings"
+        "overview calib"
         "logs     logs";
       gap:10px;align-items:start;
     }
     #panel-overview{grid-area:overview}
     #panel-pump    {grid-area:pump}
     #panel-settings{grid-area:settings}
+    #panel-calib   {grid-area:calib}
     #panel-logs    {grid-area:logs}
     #toast{bottom:12px}
   }
@@ -227,6 +243,27 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
         <div class="moisture-meta">
           <div class="label">Soil moisture</div>
           <div class="ts" id="updated">no data yet</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Environment</div>
+      <div class="env-grid">
+        <div class="env-tile">
+          <div class="env-val" id="soil-temp">--</div>
+          <div class="env-label">Soil temp</div>
+        </div>
+        <div class="env-tile">
+          <div class="env-val" id="air-temp">--</div>
+          <div class="env-label">Air temp</div>
+        </div>
+        <div class="env-tile">
+          <div class="env-val" id="air-humid">--</div>
+          <div class="env-label">Humidity</div>
+        </div>
+        <div class="env-tile">
+          <div class="env-val" id="light-val">--</div>
+          <div class="env-label">Light</div>
         </div>
       </div>
     </div>
@@ -296,7 +333,7 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
         <div class="card-title">Timings</div>
       <div class="setting-row">
         <label>Sample interval (s)</label>
-        <input type="number" id="inp-sample" min="10" max="3600" step="10">
+        <input type="number" id="inp-sample" min="5" max="3600" step="5">
         <button class="neutral set-btn" onclick="sendSampleInterval()">Set</button>
       </div>
       <div class="setting-row">
@@ -306,12 +343,12 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
       </div>
       <div class="setting-row">
         <label>Soak time (s)</label>
-        <input type="number" id="inp-soak" min="30" max="7200" step="30">
+        <input type="number" id="inp-soak" min="5" max="7200" step="5">
         <button class="neutral set-btn" onclick="sendSoak()">Set</button>
       </div>
       <div class="setting-row">
         <label>Cooldown (s)</label>
-        <input type="number" id="inp-cooldown" min="30" step="30">
+        <input type="number" id="inp-cooldown" min="5" step="5">
         <button class="neutral set-btn" onclick="sendCooldown()">Set</button>
       </div>
     </div>
@@ -327,6 +364,58 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
       </div>
       <div id="serial-log"></div>
     </div>
+  </div>
+
+  <!-- ══ CALIBRATION ══ -->
+  <div id="panel-calib" class="tab-panel">
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Live sensor readings</span>
+        <button class="neutral" style="padding:4px 10px;font-size:.72rem" onclick="pollCalib()">&#8635; Sample</button>
+      </div>
+      <table class="calib-table">
+        <thead><tr><th>Sensor</th><th>Raw ADC</th><th>Mapped</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Moisture</td>
+            <td><span class="calib-raw" id="cv-cap-raw">--</span></td>
+            <td><span class="calib-pct" id="cv-cap-pct">--</span></td>
+          </tr>
+          <tr>
+            <td>Light (LDR)</td>
+            <td><span class="calib-raw" id="cv-ldr-raw">--</span></td>
+            <td><span class="calib-pct" id="cv-ldr-pct">--</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Moisture sensor</div>
+      <div class="setting-row">
+        <label>Dry (air) raw</label>
+        <input type="number" id="ci-cap-air" min="0" max="4095">
+        <button class="neutral set-btn" onclick="captureRaw('ci-cap-air','cv-cap-raw')">&#8593; Use</button>
+      </div>
+      <div class="setting-row">
+        <label>Wet (water) raw</label>
+        <input type="number" id="ci-cap-water" min="0" max="4095">
+        <button class="neutral set-btn" onclick="captureRaw('ci-cap-water','cv-cap-raw')">&#8593; Use</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Light sensor (LDR)</div>
+      <div class="setting-row">
+        <label>Dark raw</label>
+        <input type="number" id="ci-ldr-dark" min="0" max="4095">
+        <button class="neutral set-btn" onclick="captureRaw('ci-ldr-dark','cv-ldr-raw')">&#8593; Use</button>
+      </div>
+      <div class="setting-row">
+        <label>Bright raw</label>
+        <input type="number" id="ci-ldr-bright" min="0" max="4095">
+        <button class="neutral set-btn" onclick="captureRaw('ci-ldr-bright','cv-ldr-raw')">&#8593; Use</button>
+      </div>
+    </div>
+    <button class="primary" style="width:100%;margin-top:4px" onclick="saveCalib()">Save &amp; apply</button>
   </div>
 
 </div><!-- /desktop-grid -->
@@ -350,6 +439,10 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     Logs
   </button>
+  <button class="nav-btn" id="nav-calib" onclick="showTab('calib')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="17"/><line x1="12" y1="13" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="15"/><line x1="20" y1="11" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="20" cy="13" r="2"/></svg>
+    Calib
+  </button>
 </nav>
 
 <div id="toast"></div>
@@ -359,10 +452,11 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
 var currentTab = 'overview';
 function showTab(name) {
   currentTab = name;
-  ['overview','pump','settings','logs'].forEach(function(t) {
+  ['overview','pump','settings','logs','calib'].forEach(function(t) {
     document.getElementById('panel-' + t).classList.toggle('active', t === name);
     document.getElementById('nav-'   + t).classList.toggle('active', t === name);
   });
+  if (name === 'calib') loadCalibData();
 }
 
 // ── Chart ──
@@ -413,6 +507,32 @@ function toast(msg, dur) {
   }, dur || 2500);
 }
 
+function fmtSensor(v, unit) {
+  if (v == null || v === undefined || v !== v) return null; // null or NaN
+  return v.toFixed(1) + unit;
+}
+function fmtLight(lx) {
+  if (lx == null || lx < 0) return null;
+  return lx + '%';
+}
+function updateEnv(d) {
+  // Readings use d.st/at/ah/lx; status uses d.soil_temp/air_temp/air_humid/light
+  var st = (d.st !== undefined) ? d.st : d.soil_temp;
+  var at = (d.at !== undefined) ? d.at : d.air_temp;
+  var ah = (d.ah !== undefined) ? d.ah : d.air_humid;
+  var lx = (d.lx !== undefined) ? d.lx : d.light;
+  var els = [
+    {id:'soil-temp', v: fmtSensor(st, '\u00b0C')},
+    {id:'air-temp',  v: fmtSensor(at, '\u00b0C')},
+    {id:'air-humid', v: fmtSensor(ah, '%')},
+    {id:'light-val', v: fmtLight(lx)}
+  ];
+  els.forEach(function(e) {
+    var el = document.getElementById(e.id);
+    if (e.v === null) { el.textContent = 'N/A'; el.className = 'env-val na'; }
+    else              { el.textContent = e.v;   el.className = 'env-val'; }
+  });
+}
 function setMoistureColor(val) {
   var el = document.getElementById('now');
   el.classList.remove('wet','mid','dry');
@@ -521,6 +641,7 @@ function loadData() {
       document.getElementById('now').textContent     = last.m + '%';
       setMoistureColor(last.m);
       document.getElementById('updated').textContent = fmtTimestamp(last.t);
+      updateEnv(last);
       chart.data.labels              = d.map(function(e){ return fmtLabel(e.t); });
       chart.data.datasets[0].data   = d.map(function(e){ return e.m; });
       chart.update();
@@ -595,6 +716,60 @@ function toggleAuto() {
     .then(function(j){ toast('Auto mode ' + (j.auto ? 'ON' : 'OFF')); });
 }
 
+// ── Calibration ──
+var calibInitialised = false;
+
+function loadCalibData() {
+  fetch('/calib', {credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      document.getElementById('cv-cap-raw').textContent = d.cap_raw;
+      document.getElementById('cv-ldr-raw').textContent = d.ldr_raw;
+      document.getElementById('cv-cap-pct').textContent = d.cap_pct >= 0 ? d.cap_pct + '%' : 'N/A';
+      document.getElementById('cv-ldr-pct').textContent = d.ldr_pct >= 0 ? d.ldr_pct + '%' : 'N/A';
+      if (!calibInitialised) {
+        document.getElementById('ci-cap-air').value    = d.cap_air;
+        document.getElementById('ci-cap-water').value  = d.cap_water;
+        document.getElementById('ci-ldr-dark').value   = d.ldr_dark;
+        document.getElementById('ci-ldr-bright').value = d.ldr_bright;
+        calibInitialised = true;
+      }
+    })
+    .catch(function(){ toast('Calibration fetch failed'); });
+}
+
+function pollCalib() { loadCalibData(); }
+
+function captureRaw(inputId, rawId) {
+  var raw = document.getElementById(rawId).textContent;
+  if (raw === '--') { toast('Click Sample first to get a reading'); return; }
+  document.getElementById(inputId).value = raw;
+  toast('Value captured \u2014 click Save to apply');
+}
+
+function saveCalib() {
+  var capAir    = parseInt(document.getElementById('ci-cap-air').value,    10);
+  var capWater  = parseInt(document.getElementById('ci-cap-water').value,  10);
+  var ldrDark   = parseInt(document.getElementById('ci-ldr-dark').value,   10);
+  var ldrBright = parseInt(document.getElementById('ci-ldr-bright').value, 10);
+  if ([capAir, capWater, ldrDark, ldrBright].some(isNaN)) { toast('All fields must be numbers'); return; }
+  if (capAir === capWater)   { toast('Moisture range cannot be zero'); return; }
+  if (ldrDark === ldrBright) { toast('Light range cannot be zero');    return; }
+  var body = 'cap_air='  + capAir  + '&cap_water='  + capWater +
+             '&ldr_dark=' + ldrDark + '&ldr_bright=' + ldrBright;
+  fetch('/calib', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: body
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (j.ok) { toast('Calibration saved \u2714'); calibInitialised = false; loadCalibData(); }
+      else      toast('Error: ' + (j.error || 'save failed'));
+    })
+    .catch(function(){ toast('Save failed'); });
+}
+
 // ── Serial log ──
 var autoScroll = true;
 function clearLog2() { document.getElementById('serial-log').innerHTML = ''; }
@@ -627,10 +802,12 @@ function openWS() {
         Math.round(d.spiffs_used / 1024) + '/' + Math.round(d.spiffs_total / 1024) + 'K';
       initInputs(d);
       updatePumpUI(d);
+      updateEnv(d);
     } else if (d.type === 'reading') {
       document.getElementById('now').textContent     = d.m + '%';
       setMoistureColor(d.m);
       document.getElementById('updated').textContent = fmtTimestamp(d.t);
+      updateEnv(d);
       chart.data.labels.push(fmtLabel(d.t));
       chart.data.datasets[0].data.push(d.m);
       while (chart.data.labels.length > 1440) {
