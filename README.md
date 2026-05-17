@@ -15,25 +15,26 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
 7. [Dashboard overview](#dashboard-overview)
 8. [Automatic irrigation](#automatic-irrigation)
 9. [LED dimming](#led-dimming)
-10. [Settings reference](#settings-reference)
-11. [Updating firmware over Wi-Fi](#updating-firmware-over-wi-fi)
-12. [Troubleshooting](#troubleshooting)
+10. [Language toggle](#language-toggle)
+11. [Settings reference](#settings-reference)
+12. [Updating firmware over Wi-Fi](#updating-firmware-over-wi-fi)
+13. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Hardware
 
-| Part                            | Notes                                                                  |
-| ------------------------------- | ---------------------------------------------------------------------- |
-| ESP32 WROOM-32 dev board        | Any 4 MB flash variant                                                 |
-| Capacitive soil moisture sensor | Outputs an analog voltage — **not** resistive type                     |
-| 5 V relay module                | Active-high (default) or active-low — see [Wiring](#wiring)            |
-| Submersible mini pump           | Rated for your relay's switching capacity                              |
-| DS18B20 soil temperature sensor | Waterproof probe; requires a 4.7 kΩ pull-up resistor                  |
-| AM2320 air temp + humidity      | I²C sensor; no pull-ups needed (internal)                              |
-| LDR (20 mm CDS photoresistor)   | Voltage divider with a 10 kΩ resistor to GND                          |
+| Part                            | Notes                                                                             |
+| ------------------------------- | --------------------------------------------------------------------------------- |
+| ESP32 WROOM-32 dev board        | Any 4 MB flash variant                                                            |
+| Capacitive soil moisture sensor | Outputs an analog voltage —**not** resistive type                          |
+| 5 V relay module                | Active-high (default) or active-low — see[Wiring](#wiring)                          |
+| Submersible mini pump           | Rated for your relay's switching capacity                                         |
+| DS18B20 soil temperature sensor | Waterproof probe; requires a 4.7 kΩ pull-up resistor                             |
+| AM2320 air temp + humidity      | I²C sensor; no pull-ups needed (internal)                                        |
+| LDR (20 mm CDS photoresistor)   | Voltage divider with a 10 kΩ resistor to GND                                     |
 | LED (any colour)                | Driven via PWM through a 220 Ω series resistor (red/green) or 47 Ω (blue/white) |
-| 3.7 V power supply              | Shared for ESP32 + relay; pump may need a separate supply              |
+| 3.7 V li-ion battery            | Shared for ESP32 + relay; pump may need a separate supply                         |
 
 ---
 
@@ -52,15 +53,15 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
   ESP32                    Relay Module
   ─────────────────────    ────────────
   GPIO 26  ─────────────► IN
-  5V       ─────────────► VCC
+  3.7V       ─────────────► VCC
   GND      ─────────────► GND
 
 
-  PSU (+) ──────────────► Relay NO ──┐
+  3.7 (+) ──────────────► Relay NO ──┐
                                      │ (closed when pump ON)
   Relay COM ◄──────────────────────┘
   Relay COM ────────────► Pump (+)
-  PSU (GND) ────────────► Pump (−)
+  3.7 (GND) ────────────► Pump (−)
 
 
   ESP32                    DS18B20 (soil temperature)
@@ -90,29 +91,29 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
   (use 47 Ω for blue or white LEDs)
 ```
 
-| Wire                  | From                    | To                          |
-| --------------------- | ----------------------- | --------------------------- |
-| Moisture sensor power | ESP32 3.3 V             | Sensor VCC                  |
-| Moisture sensor GND   | ESP32 GND               | Sensor GND                  |
-| Moisture sensor signal| Sensor AOUT             | ESP32 **GPIO 34**           |
-| Relay signal          | ESP32 **GPIO 26**       | Relay IN                    |
-| Relay power           | 5 V supply              | Relay VCC                   |
-| Relay ground          | ESP32 GND               | Relay GND                   |
-| Pump power (switched) | PSU +                   | Relay NO                    |
-| Pump return           | Relay COM               | Pump +                      |
-| Pump ground           | PSU GND                 | Pump −                      |
-| DS18B20 power         | ESP32 3.3 V             | DS18B20 VCC                 |
-| DS18B20 ground        | ESP32 GND               | DS18B20 GND                 |
-| DS18B20 data          | ESP32 **GPIO 4**        | DS18B20 DATA (+ 4.7 kΩ to 3.3 V) |
-| AM2320 power          | ESP32 3.3 V             | AM2320 VCC                  |
-| AM2320 ground         | ESP32 GND               | AM2320 GND                  |
-| AM2320 SDA            | ESP32 **GPIO 21**       | AM2320 SDA                  |
-| AM2320 SCL            | ESP32 **GPIO 22**       | AM2320 SCL                  |
-| LDR (top leg)         | ESP32 3.3 V             | LDR leg 1                   |
-| LDR (bottom leg)      | LDR leg 2               | ESP32 **GPIO 35** + 10 kΩ to GND |
-| LED resistor          | ESP32 **GPIO 25**       | 220 Ω resistor              |
-| LED anode             | 220 Ω resistor          | LED + (longer leg)          |
-| LED cathode           | LED − (shorter leg)     | GND                         |
+| Wire                   | From                   | To                                     |
+| ---------------------- | ---------------------- | -------------------------------------- |
+| Moisture sensor power  | ESP32 3.3 V            | Sensor VCC                             |
+| Moisture sensor GND    | ESP32 GND              | Sensor GND                             |
+| Moisture sensor signal | Sensor AOUT            | ESP32**GPIO 34**                 |
+| Relay signal           | ESP32**GPIO 26** | Relay IN                               |
+| Relay power            | 3.7 V supply           | Relay VCC                              |
+| Relay ground           | ESP32 GND              | Relay GND                              |
+| Pump power (switched)  | 3.7 +                  | Relay NO                               |
+| Pump return            | Relay COM              | Pump +                                 |
+| Pump ground            | PSU GND                | Pump −                                |
+| DS18B20 power          | ESP32 3.3 V            | DS18B20 VCC                            |
+| DS18B20 ground         | ESP32 GND              | DS18B20 GND                            |
+| DS18B20 data           | ESP32**GPIO 4**  | DS18B20 DATA (+ 4.7 kΩ to 3.3 V)      |
+| AM2320 power           | ESP32 3.3 V            | AM2320 VCC                             |
+| AM2320 ground          | ESP32 GND              | AM2320 GND                             |
+| AM2320 SDA             | ESP32**GPIO 21** | AM2320 SDA                             |
+| AM2320 SCL             | ESP32**GPIO 22** | AM2320 SCL                             |
+| LDR (top leg)          | ESP32 3.3 V            | LDR leg 1                              |
+| LDR (bottom leg)       | LDR leg 2              | ESP32**GPIO 35** + 10 kΩ to GND |
+| LED resistor           | ESP32**GPIO 25** | 220 Ω resistor                        |
+| LED anode              | 220 Ω resistor        | LED + (longer leg)                     |
+| LED cathode            | LED − (shorter leg)   | GND                                    |
 
 > **Active-low relay?** Open `soil_moist_dashboard_esp32.ino`, find `setPump()`, and swap `HIGH`/`LOW` in the two `digitalWrite` calls.
 
@@ -137,10 +138,13 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
 
 Install all of these via **Tools → Manage Libraries**:
 
-| Library     | Author                     |
-| ----------- | -------------------------- |
-| ArduinoJson | Benoit Blanchon            |
-| WebSockets  | Markus Sattler (Links2004) |
+| Library                        | Author          |
+| ------------------------------ | --------------- |
+| ArduinoJson                    | Benoit Blanchon |
+| WebSockets                     | Markus Sattler  |
+| Adafruit AM2320 sensor library | Adafruit        |
+| DallasTemperature              | Miles Burton    |
+| OneWire                        | jim Studt       |
 
 > `ArduinoOTA`, `WebServer`, `SPIFFS`, and `WiFi` are bundled with the ESP32 board package — no separate install needed.
 
@@ -167,12 +171,12 @@ Open `secrets.h` and fill in your details:
 
 All four calibration values can be tuned **at runtime** from the **Calib tab** in the dashboard — no reflash needed. Changes are saved to flash immediately.
 
-| Constant     | Default | Meaning                                        |
-| ------------ | ------- | ---------------------------------------------- |
-| `CAP_AIR`    | 3060    | Raw ADC reading with sensor in open air (0 %)  |
+| Constant       | Default | Meaning                                             |
+| -------------- | ------- | --------------------------------------------------- |
+| `CAP_AIR`    | 3060    | Raw ADC reading with sensor in open air (0 %)       |
 | `CAP_WATER`  | 940     | Raw ADC reading with sensor fully submerged (100 %) |
-| `LDR_DARK`   | 0       | Raw ADC reading in complete darkness           |
-| `LDR_BRIGHT` | 4095    | Raw ADC reading under maximum brightness       |
+| `LDR_DARK`   | 0       | Raw ADC reading in complete darkness                |
+| `LDR_BRIGHT` | 4095    | Raw ADC reading under maximum brightness            |
 
 To calibrate the moisture sensor: note the raw ADC value shown in the Calib tab while the probe is in dry air, then while submerged, and enter both values.
 
@@ -209,10 +213,12 @@ You will be prompted for the username and password set in `secrets.h`.
 ---
 
 ## Dashboard overview
+
 <img width="1919" height="911" alt="Screenshot 2026-05-10 155528" src="https://github.com/user-attachments/assets/f20de7a8-050b-4669-98d2-6927b55299f6" />
 
-
 The dashboard is organised into five tabs:
+
+> **Language toggle:** click the **AR** button in the top-right corner of the header to switch the dashboard to Arabic. Click **EN** to switch back. The preference is saved in the browser and persists across page loads.
 
 ### Overview
 
@@ -224,6 +230,7 @@ The dashboard is organised into five tabs:
 ### Controls
 
 **Pump card**
+
 - Live pump status (ON / OFF) and current mode (AUTO / MANUAL / SOAKING / COOLDOWN)
 - Progress bars for run duration, soak period, and cooldown
 - **ON / OFF** buttons for manual control
@@ -231,6 +238,7 @@ The dashboard is organised into five tabs:
 - Last run timestamp
 
 **LED card**
+
 - Mode badge (AUTO / MANUAL) and live brightness indicator
 - **Brightness slider** — in manual mode, directly sets LED brightness (0–100 %); dragging it while in auto mode switches to manual
 - **Threshold slider** — in auto mode, sets the ambient light % above which the LED turns off
@@ -310,6 +318,22 @@ Dragging the brightness slider or pressing **Full** / **Off** switches to manual
 
 ---
 
+## Language toggle
+
+The dashboard supports **English** and **Arabic** (RTL). A small toggle button in the top-right of the header switches between them.
+
+| Action            | Result                                                     |
+| ----------------- | ---------------------------------------------------------- |
+| Click**AR** | Switches the entire UI to Arabic with right-to-left layout |
+| Click**EN** | Switches back to English with left-to-right layout         |
+
+- The selected language is stored in `localStorage` and restored automatically on next page load.
+- All static labels, card titles, tab names, buttons, error messages, toast notifications, and dynamic status strings (pump/LED mode badges, progress labels) are translated.
+- The Chart.js dataset label updates to match the active language.
+- RTL mode is applied to the `<html>` element (`dir="rtl"`); text alignment and flex direction are handled by CSS.
+
+---
+
 ## Settings reference
 
 ### Irrigation
@@ -324,11 +348,11 @@ Dragging the brightness slider or pressing **Full** / **Off** switches to manual
 
 ### LED
 
-| Setting        | Default | Description                                                   |
-| -------------- | ------- | ------------------------------------------------------------- |
-| Auto mode      | ON      | Follow LDR reading; off when ambient light ≥ threshold        |
-| Threshold      | 50 %    | Ambient light level above which auto mode turns the LED off   |
-| Manual bright  | 50 %    | Brightness used when switching to manual mode                 |
+| Setting       | Default | Description                                                 |
+| ------------- | ------- | ----------------------------------------------------------- |
+| Auto mode     | ON      | Follow LDR reading; off when ambient light ≥ threshold     |
+| Threshold     | 50 %    | Ambient light level above which auto mode turns the LED off |
+| Manual bright | 50 %    | Brightness used when switching to manual mode               |
 
 All settings are saved to flash and survive reboots.
 
@@ -341,7 +365,7 @@ After the initial USB flash you can update wirelessly in two ways:
 ### Option A — Web upload (recommended)
 
 1. In Arduino IDE 2.x: **Sketch → Export Compiled Binary**
-2. Find the exported file — it will be named`soil_moist_dashboard_esp32.ino.bin`
+2. Find the exported file — it will be named `soil_moist_dashboard_esp32.ino.bin`
    > ⚠️ Do **not** use the `*.merged.bin` file — that includes the bootloader and will not work for OTA.
    >
 3. Open the dashboard → **Settings tab** → click **Firmware update**
@@ -359,18 +383,18 @@ After the initial USB flash you can update wirelessly in two ways:
 
 ## Troubleshooting
 
-| Symptom                                            | Likely cause                              | Fix                                                                                           |
-| -------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Device not connecting to Wi-Fi                     | Wrong credentials                         | Double-check `secrets.h` and re-flash                                                         |
-| Moisture always reads 0 % or 100 %                 | Sensor not calibrated                     | Use the **Calib tab** to set `CAP_AIR` and `CAP_WATER`                                        |
-| Light always reads 0 % or 100 %                    | LDR not calibrated                        | Use the **Calib tab** to set `LDR_DARK` and `LDR_BRIGHT`                                      |
-| Pump never turns on in auto mode                   | Threshold too low or cooldown active      | Check the Controls tab for active cooldown; raise the threshold                               |
-| LED stays off even when dark                       | Auto threshold too low, or manual mode    | Open Controls tab — check threshold and mode badge; try pressing **Auto** to re-enable        |
-| LED is on but no visible light                     | LED wired backwards                       | Flip the LED — the longer leg (anode +) must face the resistor / GPIO side                   |
-| LED very dim even at 100 %                         | Blue/white LED with 220 Ω (too large)    | Replace with a **47 Ω** resistor; blue/white LEDs have ~3.0–3.3 V forward voltage           |
-| Chart shows no data                                | NTP not synced yet                        | Check Logs tab — readings are skipped until time is known                                    |
-| ArduinoOTA fails with error 2 (connect failed)     | WebSocket I/O interfering during OTA      | Already fixed in firmware — re-flash via USB once, then OTA will work                        |
-| OTA upload completes but device keeps old firmware | Wrong `.bin` file used                    | Use `*.ino.bin`, not `*.merged.bin`                                                           |
-| Web OTA fails mid-upload                           | File too large for available flash        | The sketch + all headers must fit within the OTA partition (~1.8 MB on a 4 MB chip)           |
-| "Update failed" message                            | Flash write error                         | Check the Logs tab for the specific error; try rebooting the device first                     |
-| Dashboard login not accepted                       | Wrong credentials                         | Edit `secrets.h`, re-flash                                                                    |
+| Symptom                                            | Likely cause                           | Fix                                                                                          |
+| -------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Device not connecting to Wi-Fi                     | Wrong credentials                      | Double-check `secrets.h` and re-flash                                                      |
+| Moisture always reads 0 % or 100 %                 | Sensor not calibrated                  | Use the**Calib tab** to set `CAP_AIR` and `CAP_WATER`                              |
+| Light always reads 0 % or 100 %                    | LDR not calibrated                     | Use the**Calib tab** to set `LDR_DARK` and `LDR_BRIGHT`                            |
+| Pump never turns on in auto mode                   | Threshold too low or cooldown active   | Check the Controls tab for active cooldown; raise the threshold                              |
+| LED stays off even when dark                       | Auto threshold too low, or manual mode | Open Controls tab — check threshold and mode badge; try pressing**Auto** to re-enable |
+| LED is on but no visible light                     | LED wired backwards                    | Flip the LED — the longer leg (anode +) must face the resistor / GPIO side                  |
+| LED very dim even at 100 %                         | Blue/white LED with 220 Ω (too large) | Replace with a**47 Ω** resistor; blue/white LEDs have ~3.0–3.3 V forward voltage     |
+| Chart shows no data                                | NTP not synced yet                     | Check Logs tab — readings are skipped until time is known                                   |
+| ArduinoOTA fails with error 2 (connect failed)     | WebSocket I/O interfering during OTA   | Already fixed in firmware — re-flash via USB once, then OTA will work                       |
+| OTA upload completes but device keeps old firmware | Wrong `.bin` file used               | Use `*.ino.bin`, not `*.merged.bin`                                                      |
+| Web OTA fails mid-upload                           | File too large for available flash     | The sketch + all headers must fit within the OTA partition (~1.8 MB on a 4 MB chip)          |
+| "Update failed" message                            | Flash write error                      | Check the Logs tab for the specific error; try rebooting the device first                    |
+| Dashboard login not accepted                       | Wrong credentials                      | Edit `secrets.h`, re-flash                                                                 |
