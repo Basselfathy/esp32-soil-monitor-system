@@ -21,6 +21,7 @@
 #include "sensors.h"
 #include "storage.h"
 #include "pump.h"
+#include "led.h"
 #include "connectivity.h"
 #include "websocket_srv.h"
 #include "http_handlers.h"
@@ -55,7 +56,9 @@ void setup()
   loadSyslog();
   loadCalib();
   loadPumpConfig();
+  loadLedConfig();
   setupSensors();
+  setupLed();
   connectWifi();
   syncNTP();
   setupOTA();
@@ -111,10 +114,19 @@ void loop()
     wsPushStatus();
   }
 
+  // Fast LDR + LED update — every 50 ms (independent of sensor interval)
+  static unsigned long lastLdrSample = 0;
+  if (millis() - lastLdrSample >= 50) {
+    lastLdrSample = millis();
+    lastLight = readLight();
+    runLedLogic();
+  }
+
   // Sensor sampling — once per sampleIntervalMs
   if (millis() - lastSample >= sampleIntervalMs) {
     lastSample = millis();
-    readAllSensors();
+    readAllSensors(); // also re-reads LDR into lastLight; runLedLogic picks it up next fast tick
+    wsPushStatus();
     if (WiFi.status() == WL_CONNECTED)
       appendReading();
     else

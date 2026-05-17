@@ -313,6 +313,58 @@ void handleCalibPost()
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
+// ── LED config — GET: current state ───────────────────────
+void handleLedGet()
+{
+  if (!isAuthenticated()) return;
+  char resp[128];
+  snprintf(resp, sizeof(resp),
+    "{\"auto\":%s,\"brightness\":%d,\"manual\":%d,\"threshold\":%d}",
+    ledAutoMode ? "true" : "false",
+    ledBrightness, ledManualBright, ledThreshold);
+  server.send(200, "application/json", resp);
+}
+
+// ── LED config — POST: ?auto=0|1  ?manual=0-100  ?threshold=0-100 ──
+void handleLedConfig()
+{
+  if (!isAuthenticated()) return;
+  bool changed = false;
+  if (server.hasArg("auto")) {
+    ledAutoMode = server.arg("auto").toInt() != 0;
+    if (ledAutoMode) runLedLogic();  // apply immediately
+    changed = true;
+  }
+  if (server.hasArg("manual")) {
+    int v = server.arg("manual").toInt();
+    if (v >= 0 && v <= 100) { ledManualBright = v; changed = true; }
+    if (!ledAutoMode) setLed(ledManualBright);
+  }
+  if (server.hasArg("threshold")) {
+    int v = server.arg("threshold").toInt();
+    if (v >= 0 && v <= 100) { ledThreshold = v; changed = true; }
+  }
+  if (changed) { saveLedConfig(); wsPushStatus(); }
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
+// ── LED manual brightness — POST: ?brightness=0-100 ──────────
+void handleLedSet()
+{
+  if (!isAuthenticated()) return;
+  if (server.hasArg("brightness")) {
+    int v = server.arg("brightness").toInt();
+    if (v >= 0 && v <= 100) {
+      ledAutoMode     = false;
+      ledManualBright = v;
+      setLed(v);
+      saveLedConfig();
+      wsPushStatus();
+    }
+  }
+  server.send(200, "application/json", "{\"ok\":true}");
+}
+
 // ── OTA (Arduino IDE / network) ───────────────────────
 void setupOTA()
 {
@@ -320,20 +372,26 @@ void setupOTA()
   ArduinoOTA.setPassword(AUTH_PASS);
   ArduinoOTA.onStart([]() {
     esp_task_wdt_delete(NULL);
+    // Kill all WebSocket activity before OTA touches the network/flash.
+    // wsPushStatus() and wsPushLog() both check wsReady first, so setting
+    // it false here makes every subsequent log/push call a safe no-op.
+    wsReady = false;
+    for (uint8_t i = 0; i < WEBSOCKETS_SERVER_CLIENT_MAX; i++)
+      ws.disconnect(i);
     const char *type = ArduinoOTA.getCommand() == U_FLASH ? "sketch" : "filesystem";
-    logf("OTA start — updating %s\n", type);
+    Serial.printf("OTA start — updating %s\n", type);
     setPump(false);
   });
-  ArduinoOTA.onEnd([]()   { log("OTA complete — rebooting"); });
+  ArduinoOTA.onEnd([]()   { Serial.println("OTA complete — rebooting"); });
   ArduinoOTA.onProgress([](unsigned int p, unsigned int t)
-                         { logf("OTA progress: %u%%\n", p / (t / 100)); });
+                         { Serial.printf("OTA progress: %u%%\n", p / (t / 100)); });
   ArduinoOTA.onError([](ota_error_t e) {
-    logf("OTA error [%u]: ", e);
-    if      (e == OTA_AUTH_ERROR)    log("auth failed");
-    else if (e == OTA_BEGIN_ERROR)   log("begin failed");
-    else if (e == OTA_CONNECT_ERROR) log("connect failed");
-    else if (e == OTA_RECEIVE_ERROR) log("receive failed");
-    else if (e == OTA_END_ERROR)     log("end failed");
+    Serial.printf("OTA error [%u]: ", e);
+    if      (e == OTA_AUTH_ERROR)    Serial.println("auth failed");
+    else if (e == OTA_BEGIN_ERROR)   Serial.println("begin failed");
+    else if (e == OTA_CONNECT_ERROR) Serial.println("connect failed");
+    else if (e == OTA_RECEIVE_ERROR) Serial.println("receive failed");
+    else if (e == OTA_END_ERROR)     Serial.println("end failed");
   });
   ArduinoOTA.begin();
   log("OTA ready");
@@ -398,4 +456,7 @@ void setupRoutes()
   server.on("/pump/off",    handlePumpOff);
   server.on("/pump/auto",   handlePumpAuto);
   server.on("/pump/config", handlePumpConfig);
+  server.on("/led",         HTTP_GET,  handleLedGet);
+  server.on("/led/config",  HTTP_POST, handleLedConfig);
+  server.on("/led/set",     HTTP_POST, handleLedSet);
 }

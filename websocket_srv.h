@@ -54,20 +54,24 @@ void buildStatusDoc(DynamicJsonDocument &doc)
                                  ? (int)((soakUntil - now) / 1000) : 0;
   doc["soak_s"]              = (int)(soakMs / 1000);
   doc["last_pump_run"]       = lastPumpRun;
+  // LED
+  doc["led_auto"]            = ledAutoMode;
+  doc["led_brightness"]      = ledBrightness;
+  doc["led_manual"]          = ledManualBright;
+  doc["led_threshold"]       = ledThreshold;
 }
 
 // ── Push helpers ──────────────────────────────────────
 void wsPushStatus()
 {
   if (!wsReady) return;
-  DynamicJsonDocument doc(768);
+  DynamicJsonDocument doc(896);
   buildStatusDoc(doc);
   doc["type"] = "status";
   String out;
   serializeJson(doc, out);
   wsBroadcast(out);
 }
-
 void wsPushLog(int idx)
 {
   if (!wsReady) return;
@@ -111,7 +115,7 @@ void onWsEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
         && strcmp(doc["token"] | "", wsToken) == 0) {
       wsClientAuthed[num] = true;
       // Send full status
-      DynamicJsonDocument statusDoc(768);
+      DynamicJsonDocument statusDoc(896);
       buildStatusDoc(statusDoc);
       statusDoc["type"] = "status";
       String out;

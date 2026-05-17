@@ -16,6 +16,7 @@ const int PIN_RELAY   = 26;  // Relay signal — active-HIGH
 const int PIN_DS18B20 =  4;  // DS18B20 soil temp — OneWire, 4.7kΩ pull-up to 3.3V
 // AM2320 air temp+humidity — I2C: SDA=21, SCL=22 (ESP32 defaults)
 const int PIN_LDR     = 35;  // LDR (CDS) — voltage divider: 3.3V→LDR→GPIO35→10kΩ→GND
+const int PIN_LED     = 25;  // Dimmable LED — 220Ω series resistor to GND
 
 // ── Sensor calibration (runtime-adjustable — saved to /calib.json) ──
 // These are plain ints so the Calibration tab can update them at runtime.
@@ -39,5 +40,6 @@ const int MAX_BUFFER  =   10; // offline reading buffer size
 // ── SPIFFS file paths ─────────────────────────────────
 const char *LOG_FILE = "/readings.json";
 const char *TMP_FILE = "/readings.tmp";
-const char *CFG_FILE = "/pump.json";
-const char *SYS_FILE = "/syslog.json";
+const char *CFG_FILE   = "/pump.json";
+const char *LED_FILE   = "/led.json";
+const char *SYS_FILE   = "/syslog.json";

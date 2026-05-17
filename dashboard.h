@@ -200,17 +200,17 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
       display:grid;
       grid-template-columns:1fr 1fr;
       grid-template-areas:
-        "overview pump"
+        "overview controls"
         "overview settings"
         "overview calib"
         "logs     logs";
       gap:10px;align-items:start;
     }
-    #panel-overview{grid-area:overview}
-    #panel-pump    {grid-area:pump}
-    #panel-settings{grid-area:settings}
-    #panel-calib   {grid-area:calib}
-    #panel-logs    {grid-area:logs}
+    #panel-overview {grid-area:overview}
+    #panel-controls {grid-area:controls}
+    #panel-settings {grid-area:settings}
+    #panel-calib    {grid-area:calib}
+    #panel-logs     {grid-area:logs}
     #toast{bottom:12px}
   }
 </style>
@@ -282,10 +282,22 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
         <button class="warning" onclick="window.location='/update'">Firmware Update</button>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Serial monitor</span>
+        <div style="display:flex;gap:6px">
+          <button class="neutral" style="padding:4px 10px;font-size:.72rem" onclick="clearLog2()">Clear</button>
+          <button class="neutral" style="padding:4px 10px;font-size:.72rem" id="btn-scroll" onclick="toggleScroll()">Auto-scroll: ON</button>
+        </div>
+      </div>
+      <div id="serial-log"></div>
+    </div>
   </div>
 
-  <!-- ══ PUMP ══ -->
-  <div id="panel-pump" class="tab-panel">
+  <!-- ══ CONTROLS ══ -->
+  <div id="panel-controls" class="tab-panel">
+
+    <!-- Pump -->
     <div class="card">
       <div class="card-title">Pump control</div>
       <div class="pump-header">
@@ -317,12 +329,40 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
         Last run: <span id="last-pump-run" style="color:var(--text);font-weight:600">never</span>
       </div>
     </div>
-  </div>
+
+    <!-- LED -->
+    <div class="card">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>LED</span>
+        <span class="badge auto" id="led-mode-badge">AUTO</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="pump-dot" id="led-dot"></div>
+        <span style="font-size:.95rem;font-weight:700" id="led-bright-label">0%</span>
+      </div>
+      <div class="setting-row" style="border:none;padding-bottom:0">
+        <label>Brightness</label>
+        <input type="range" id="sl-led" min="0" max="100" oninput="onLedSlider()" onchange="sendLedManual()">
+        <span class="slider-val" id="val-led">0%</span>
+      </div>
+      <div class="setting-row">
+        <label>Auto off above</label>
+        <input type="range" id="sl-led-thresh" min="0" max="100" oninput="onLedThreshSlider()" onchange="sendLedThreshold()">
+        <span class="slider-val" id="val-led-thresh">50%</span>
+      </div>
+      <div class="pump-btns">
+        <button class="primary"     onclick="ledSetBright(100)">Full</button>
+        <button class="danger"      onclick="ledSetBright(0)">Off</button>
+        <button class="active-blue" id="btn-led-auto" onclick="toggleLedAuto()">Auto: ON</button>
+      </div>
+    </div>
+
+  </div><!-- /panel-controls -->
 
   <!-- ══ SETTINGS ══ -->
   <div id="panel-settings" class="tab-panel">
     <div class="card">
-      <div class="card-title">Threshold</div>
+      <div class="card-title">Moisture Threshold</div>
       <div class="setting-row">
         <label>Low threshold</label>
         <input type="range" id="sl-low" min="0" max="99" oninput="onSlider()" onchange="sendThresholds()">
@@ -351,18 +391,6 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
         <input type="number" id="inp-cooldown" min="5" step="5">
         <button class="neutral set-btn" onclick="sendCooldown()">Set</button>
       </div>
-    </div>
-  </div>
-  <div id="panel-logs" class="tab-panel">
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>Serial monitor</span>
-        <div style="display:flex;gap:6px">
-          <button class="neutral" style="padding:4px 10px;font-size:.72rem" onclick="clearLog2()">Clear</button>
-          <button class="neutral" style="padding:4px 10px;font-size:.72rem" id="btn-scroll" onclick="toggleScroll()">Auto-scroll: ON</button>
-        </div>
-      </div>
-      <div id="serial-log"></div>
     </div>
   </div>
 
@@ -427,17 +455,13 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     Overview
   </button>
-  <button class="nav-btn" id="nav-pump" onclick="showTab('pump')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="4" ry="3"/><path d="M8 5v6a4 4 0 008 0V5"/><line x1="12" y1="11" x2="12" y2="19"/><line x1="8" y1="19" x2="16" y2="19"/></svg>
-    Pump
+  <button class="nav-btn" id="nav-controls" onclick="showTab('controls')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="7" height="10" rx="1"/><rect x="15" y="7" width="7" height="10" rx="1"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+    Controls
   </button>
   <button class="nav-btn" id="nav-settings" onclick="showTab('settings')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
     Settings
-  </button>
-  <button class="nav-btn" id="nav-logs" onclick="showTab('logs')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    Logs
   </button>
   <button class="nav-btn" id="nav-calib" onclick="showTab('calib')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="17"/><line x1="12" y1="13" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="15"/><line x1="20" y1="11" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="20" cy="13" r="2"/></svg>
@@ -452,7 +476,7 @@ const char DASHBOARD[] PROGMEM = R"rawhtml(
 var currentTab = 'overview';
 function showTab(name) {
   currentTab = name;
-  ['overview','pump','settings','logs','calib'].forEach(function(t) {
+  ['overview','controls','settings','logs','calib'].forEach(function(t) {
     document.getElementById('panel-' + t).classList.toggle('active', t === name);
     document.getElementById('nav-'   + t).classList.toggle('active', t === name);
   });
@@ -628,7 +652,64 @@ function initInputs(s) {
   document.getElementById('inp-duration').value  = s.pump_duration_s   || 30;
   document.getElementById('inp-cooldown').value  = s.cooldown_s        || 300;
   document.getElementById('inp-soak').value      = s.soak_s            || 300;
+  // LED initial values from first status message
+  document.getElementById('sl-led').value          = s.led_manual    || 50;
+  document.getElementById('val-led').textContent   = (s.led_manual   || 50) + '%';
+  document.getElementById('sl-led-thresh').value   = s.led_threshold || 50;
+  document.getElementById('val-led-thresh').textContent = (s.led_threshold || 50) + '%';
   inputsInitialised = true;
+}
+
+// ── LED UI ──
+function updateLedUI(s) {
+  var bright = s.led_brightness || 0;
+  var isAuto = s.led_auto !== undefined ? s.led_auto : true;
+  var dot    = document.getElementById('led-dot');
+  var badge  = document.getElementById('led-mode-badge');
+  var btn    = document.getElementById('btn-led-auto');
+  document.getElementById('led-bright-label').textContent = bright + '%';
+  dot.className = 'pump-dot' + (bright > 0 ? ' on' : '');
+  badge.textContent = isAuto ? 'AUTO' : 'MANUAL';
+  badge.className   = 'badge ' + (isAuto ? 'auto' : 'manual');
+  btn.textContent   = 'Auto: ' + (isAuto ? 'ON' : 'OFF');
+  btn.className     = isAuto ? 'active-blue' : 'neutral';
+  if (!isAuto) {
+    document.getElementById('sl-led').value        = s.led_manual || 0;
+    document.getElementById('val-led').textContent = (s.led_manual || 0) + '%';
+  }
+  document.getElementById('sl-led-thresh').value        = s.led_threshold || 50;
+  document.getElementById('val-led-thresh').textContent = (s.led_threshold || 50) + '%';
+}
+function onLedSlider() {
+  document.getElementById('val-led').textContent = document.getElementById('sl-led').value + '%';
+}
+function onLedThreshSlider() {
+  document.getElementById('val-led-thresh').textContent = document.getElementById('sl-led-thresh').value + '%';
+}
+function sendLedManual() {
+  var v = document.getElementById('sl-led').value;
+  fetch('/led/set?brightness=' + v, {method:'POST', credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(){ toast('LED \u2192 ' + v + '%'); });
+}
+function sendLedThreshold() {
+  var v = document.getElementById('sl-led-thresh').value;
+  fetch('/led/config?threshold=' + v, {method:'POST', credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(){ toast('LED auto threshold \u2192 ' + v + '%'); });
+}
+function ledSetBright(v) {
+  document.getElementById('sl-led').value        = v;
+  document.getElementById('val-led').textContent = v + '%';
+  fetch('/led/set?brightness=' + v, {method:'POST', credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(){ toast('LED ' + (v === 0 ? 'OFF' : 'Full')); });
+}
+function toggleLedAuto() {
+  var cur = document.getElementById('btn-led-auto').textContent.indexOf('ON') >= 0;
+  fetch('/led/config?auto=' + (cur ? '0' : '1'), {method:'POST', credentials:'include'})
+    .then(function(r){ return r.json(); })
+    .then(function(){ toast('LED auto ' + (cur ? 'OFF' : 'ON')); });
 }
 
 // ── Data / chart ──
@@ -802,6 +883,7 @@ function openWS() {
         Math.round(d.spiffs_used / 1024) + '/' + Math.round(d.spiffs_total / 1024) + 'K';
       initInputs(d);
       updatePumpUI(d);
+      updateLedUI(d);
       updateEnv(d);
     } else if (d.type === 'reading') {
       document.getElementById('now').textContent     = d.m + '%';
