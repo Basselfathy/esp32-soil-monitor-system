@@ -1,4 +1,5 @@
 # Soil Moisture Dashboard — ESP32
+<img width="1408" height="768" alt="Gemini_Generated_Image_c4iku7c4iku7c4ik" src="https://github.com/user-attachments/assets/b24da6d4-1af1-4207-ba6f-87c2f7c666e6" />
 
 A self-hosted soil moisture monitor with automated irrigation, a real-time web dashboard, and over-the-air firmware updates.
 
@@ -40,7 +41,8 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
 
 ## Wiring
 
-<img width="3000" height="1863" alt="circuit_image" src="https://github.com/user-attachments/assets/c8398140-dcb2-4f54-bf4b-86c4270b24a7" />
+<img width="3000" height="1493" alt="circuit_image (1)" src="https://github.com/user-attachments/assets/c8500763-1956-406b-bf98-290bc137440c" />
+
 
 ```
   ESP32                    Soil Moisture Sensor
@@ -75,8 +77,8 @@ A self-hosted soil moisture monitor with automated irrigation, a real-time web d
   ─────────────────────    ───────────────────────────
   3.3V     ─────────────► VCC
   GND      ─────────────► GND
-  GPIO 21  ──────────────► SDA
-  GPIO 22  ──────────────► SCL
+  GPIO 21  ──────────────► SDA (connect to VCC via 4.7 kΩ)
+  GPIO 22  ──────────────► SCL (connect to VCC via 4.7 kΩ)
 
 
   ESP32                    LDR (light sensor)
@@ -214,7 +216,8 @@ You will be prompted for the username and password set in `secrets.h`.
 
 ## Dashboard overview
 
-<img width="1919" height="911" alt="Screenshot 2026-05-10 155528" src="https://github.com/user-attachments/assets/f20de7a8-050b-4669-98d2-6927b55299f6" />
+<img width="1550" height="1350" alt="dashboard" src="https://github.com/user-attachments/assets/b4c0cc1f-ca99-40a9-b981-2dd958d9bb04" />
+
 
 The dashboard is organised into five tabs:
 
